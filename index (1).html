@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Restaurant table reservation website">
+  <title>Restaurant — Book Your Table</title>
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    :root{
+      --bg:#fffaf4;
+      --surface:#ffffff;
+      --text:#211b16;
+      --muted:#71685f;
+      --accent:#a4512a;
+      --accent-dark:#7d381b;
+      --line:#eadfd4;
+      --success:#237a4b;
+      --error:#b42318;
+      --radius:18px;
+      --shadow:0 14px 40px rgba(48,29,17,.10);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    .container { width: min(1120px, 92%); margin: auto; }
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 100;
+      background: rgba(255, 250, 244, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .brand-logo {
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+    }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a:hover { color: var(--accent); }
+    .menu-toggle { display: none; border: 0; background: transparent; font-size: 1.7rem; cursor: pointer; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 22px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+    .btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn.secondary { background: transparent; color: var(--accent); border-color: var(--accent); }
+    
+    /* Slides Container & Slide Layout */
+    .slides-container {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    .no-transition .slide,
+    .no-transition .slide * {
+      transition: none !important;
+    }
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(100%);
+      transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.9s ease, visibility 0.9s;
+      z-index: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: linear-gradient(rgba(255, 250, 244, 0.88), rgba(255, 250, 244, 0.88)), url("bg_texture.png") center/cover;
+      padding: 90px 0 60px;
+    }
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      z-index: 5;
+    }
+    .slide.past {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-100%);
+      z-index: 2;
+    }
+    .slide.future {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(100%);
+      z-index: 2;
+    }
+
+    .hero.slide {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 90px 20px 60px;
+      background:
+        linear-gradient(rgba(30,18,10,.58),rgba(30,18,10,.58)),
+        url("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1800&q=85") center/cover;
+      color: white;
+    }
+    .hero-content { max-width: 780px; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: .78rem; font-weight: 800; margin-bottom: 16px; }
+    h1 { font-size: clamp(2.7rem, 7vw, 5.8rem); line-height: .98; margin-bottom: 24px; }
+    .hero p { font-size: 1.08rem; max-width: 650px; margin: 0 auto 30px; color: #f6eee7; }
+    .section { padding: 0; }
+    .section-head { text-align: center; max-width: 700px; margin: 0 auto 44px; }
+    .section-head h2 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; margin-bottom: 12px; }
+    .section-head p { color: var(--muted); }
+    .about-grid, .reservation-grid, .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+    #about {
+      background: linear-gradient(rgba(255, 250, 244, 0.82), rgba(255, 250, 244, 0.82)), url("about_bg.png") center/cover;
+    }
+    .about-image {
+      min-height: 420px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: url("https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=85") center/cover;
+    }
+    .about-copy h2 { font-size: 2.6rem; line-height: 1.1; margin-bottom: 18px; }
+    .about-copy p { color: var(--muted); margin-bottom: 18px; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 28px rgba(48,29,17,.06); }
+    .card img { height: 230px; width: 100%; object-fit: cover; }
+    .card-body { padding: 22px; }
+    .card-body h3 { margin-bottom: 8px; }
+    .card-body p { color: var(--muted); }
+    .price { display: block; color: var(--accent); font-weight: 800; margin-top: 12px; }
+    .reservation { background: linear-gradient(rgba(244, 233, 221, 0.88), rgba(244, 233, 221, 0.88)), url("bg_texture.png") center/cover; }
+    .form-card { background: var(--surface); padding: 34px; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .form-card h2 { font-size: 2rem; margin-bottom: 8px; }
+    .form-card>p { color: var(--muted); margin-bottom: 22px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: 700; margin-bottom: 7px; }
+    input {
+      width: 100%;
+      height: 50px;
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(164,81,42,.12); }
+    .form-card .btn { width: 100%; border: 0; margin-top: 6px; }
+    .status { min-height: 26px; margin-top: 15px; font-weight: 700; }
+    .success { color: var(--success); }
+    .error { color: var(--error); }
+    .reservation-copy {
+      min-height: 430px;
+      border-radius: var(--radius);
+      padding: 50px;
+      color: white;
+      background:
+        linear-gradient(rgba(31,20,13,.66),rgba(31,20,13,.66)),
+        url("https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1200&q=85") center/cover;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .reservation-copy h2 { font-size: 3rem; line-height: 1.05; margin-bottom: 16px; }
+    .reservation-copy p { color: #f4e9dd; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .info { padding: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); text-align: center; }
+    .info h3 { margin-bottom: 8px; }
+    .info p { color: var(--muted); }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* Slide Footer styling */
+    .slide-footer {
+      background: #211b16;
+      color: #fff;
+      padding: 36px 0;
+      text-align: center;
+      margin-top: 50px;
+      width: 100%;
+      border-top: 1px solid #3c322b;
+    }
+    .slide-footer p { color: #d5cbc1; margin-top: 8px; }
+
+    /* Dot Indicators styling */
+    .slide-indicators {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 100;
+    }
+    .indicator-dot {
+      position: relative;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.3s ease;
+    }
+    .indicator-dot:hover {
+      background: var(--accent);
+      transform: scale(1.2);
+    }
+    .indicator-dot.active {
+      background: var(--accent);
+      transform: scale(1.3);
+      box-shadow: 0 0 0 4px rgba(164, 81, 42, 0.25);
+    }
+    .indicator-dot .tooltip {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%) translateX(10px);
+      background: rgba(33, 27, 22, 0.95);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      white-space: nowrap;
+      transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .indicator-dot:hover .tooltip {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
+
+    /* Scroll Prompt Arrow styling */
+    .scroll-prompt {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      z-index: 10;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: bounce 2s infinite;
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+    .scroll-prompt:hover { opacity: 1; }
+    .scroll-prompt svg { width: 20px; height: 20px; fill: currentColor; }
+    
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+      40% { transform: translateX(-50%) translateY(-6px); }
+      60% { transform: translateX(-50%) translateY(-3px); }
+    }
+
+    /* Content Animations */
+    .slide .eyebrow,
+    .slide h1,
+    .slide h2,
+    .slide p,
+    .slide .cta-row,
+    .slide .about-image,
+    .slide .about-copy,
+    .slide .cards,
+    .slide .form-card,
+    .slide .reservation-copy,
+    .slide .info-grid {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+    }
+
+    .slide.active .eyebrow {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.2s;
+    }
+    .slide.active h1,
+    .slide.active h2 {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.35s;
+    }
+    .slide.active p {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.5s;
+    }
+    .slide.active .cta-row,
+    .slide.active .about-image,
+    .slide.active .about-copy,
+    .slide.active .cards,
+    .slide.active .form-card,
+    .slide.active .reservation-copy,
+    .slide.active .info-grid {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.6s;
+    }
+
+    /* Staggered cards entry */
+    .slide.active .card {
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+    }
+    .slide.active .card:nth-child(1) { transition-delay: 0.6s; }
+    .slide.active .card:nth-child(2) { transition-delay: 0.75s; }
+    .slide.active .card:nth-child(3) { transition-delay: 0.9s; }
+
+    @media(max-width: 850px) {
+      .nav-links {
+        display: none;
+        position: absolute;
+        left: 4%;
+        right: 4%;
+        top: 68px;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 8px; }
+      .menu-toggle { display: block; }
+      .about-grid, .reservation-grid, .contact-grid { grid-template-columns: 1fr; gap: 30px; }
+      .cards { grid-template-columns: 1fr 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+      .slide-indicators { right: 12px; }
+      .indicator-dot .tooltip { display: none; }
+    }
+    
+    @media(max-width: 560px) {
+      .hero { padding: 70px 18px; }
+      .cards { grid-template-columns: 1fr; }
+      .about-image { min-height: 250px; }
+      .reservation-copy { min-height: 280px; padding: 24px; }
+      .reservation-copy h2 { font-size: 2.1rem; }
+      .form-card { padding: 24px; }
+      .slide { padding: 80px 16px 60px; }
+      .scroll-prompt { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container nav">
+    <a class="brand" href="#home">
+      <img src="logo.png" alt="JP Resort Logo" class="brand-logo">
+      <span>JP Resort</span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#home">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#menu">Menu</a></li>
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#reservation">Reservation</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</header>
+
+<main class="slides-container" id="slidesContainer">
+  <section class="slide hero active" id="home">
+    <div class="hero-content">
+      <div class="eyebrow">Fresh • Local • Memorable</div>
+      <h1>A Table Worth Gathering Around</h1>
+      <p>Experience thoughtfully prepared food, warm hospitality and an atmosphere made for memorable moments.</p>
+      <div class="cta-row">
+        <a class="btn" href="#reservation">Book Your Table</a>
+        <a class="btn secondary" href="#menu" style="color:white;border-color:white">Explore Menu</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section future" id="about">
+    <div class="container about-grid">
+      <div class="about-image" aria-label="Restaurant interior"></div>
+      <div class="about-copy">
+        <div class="eyebrow">Our Story</div>
+        <h2>Food made with care, served with heart.</h2>
+        <p>We bring seasonal ingredients, time-tested techniques and a welcoming dining experience together under one roof.</p>
+        <p>Whether it is a relaxed lunch, a family dinner or a special celebration, our kitchen is here to make every visit delicious.</p>
+        <a class="btn" href="#contact">Discover More</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section future" id="menu">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Chef's Selection</div>
+        <h2>Signature Dishes</h2>
+        <p>A selection of favourites inspired by fresh ingredients and bold flavours.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85" alt="Signature dish">
+          <div class="card-body"><h3>Seasonal Bowl</h3><p>Fresh vegetables, grains and house dressing.</p><span class="price">₹349</span></div>
+        </article>
+        <article class="card">
+          <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=900&q=85" alt="Pasta dish">
+          <div class="card-body"><h3>House Pasta</h3><p>Hand-finished pasta with a rich signature sauce.</p><span class="price">₹429</span></div>
+        </article>
+        <article class="card">
+          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=85" alt="Grilled dish">
+          <div class="card-body"><h3>Chef's Grill</h3><p>Char-grilled speciality served with seasonal sides.</p><span class="price">₹549</span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section future" id="gallery">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Inside Savour</div>
+        <h2>A place to enjoy</h2>
+        <p>Good food, beautiful surroundings and a relaxed dining experience.</p>
+      </div>
+      <div class="cards">
+        <article class="card"><img src="https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=85" alt="Dining area"></article>
+        <article class="card"><img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85" alt="Restaurant seating"></article>
+        <article class="card"><img src="https://images.unsplash.com/photo-1511081692775-05d0f180a065?auto=format&fit=crop&w=900&q=85" alt="Restaurant table"></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section reservation future" id="reservation">
+    <div class="container reservation-grid">
+      <div class="reservation-copy">
+        <div class="eyebrow">Reservations</div>
+        <h2>Make your next meal memorable.</h2>
+        <p>Fill in your details and our team will receive your reservation request.</p>
+        <br>
+        <a class="btn" href="https://payments.cashfree.com/forms/getaudit" target="_blank" rel="noopener noreferrer">Reserve Now – ₹1</a>
+      </div>
+
+      <div class="form-card">
+        <h2>Book Your Table</h2>
+        <p>Only three details are needed.</p>
+        <form id="reservationForm">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" autocomplete="name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" required>
+          </div>
+          <button class="btn" type="submit">Reserve My Table</button>
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide section future" id="contact">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Visit Us</div>
+        <h2>Come dine with us</h2>
+        <p>We look forward to welcoming you.</p>
+      </div>
+      <div class="info-grid">
+        <div class="info"><h3>Location</h3><p>123 Food Street<br>Chennai, Tamil Nadu</p></div>
+        <div class="info"><h3>Opening Hours</h3><p>Mon–Sun<br>11:00 AM – 11:00 PM</p></div>
+        <div class="info"><h3>Contact</h3><p>+91 98765 43210<br>hello@savour.example</p></div>
+      </div>
+    </div>
+
+    <footer class="slide-footer">
+      <div class="container">
+        <strong>JP Resort</strong>
+        <p>Good food. Good company. Great memories.</p>
+        <p>© 2026 JP Resort. All rights reserved.</p>
+      </div>
+    </footer>
+  </section>
+</main>
+
+<div class="slide-indicators" id="slideIndicators"></div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRu1kJy03tEmfq28CfwFl6dSPSy71_EOvd7cpRJUbxd8ki5O4Bnz3SrwtakHnGsEF-/exec";
+
+  const menuToggle = document.getElementById("menuToggle");
+  const navLinks = document.getElementById("navLinks");
+
+  menuToggle.addEventListener("click", () => {
+    navLinks.classList.toggle("open");
+  });
+
+  navLinks.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => navLinks.classList.remove("open"));
+  });
+
+  // Slide Manager Implementation
+  const slides = document.querySelectorAll(".slide");
+  const indicatorsContainer = document.getElementById("slideIndicators");
+  const transitionDuration = 900; // ms (must match CSS transition speed)
+  let currentSlideIndex = 0;
+  let isTransitioning = false;
+
+  // Build hash-to-slide index map
+  const hashToIndex = {};
+  slides.forEach((slide, idx) => {
+    hashToIndex[`#${slide.id}`] = idx;
+  });
+
+  // Generate slide indicators dynamically
+  slides.forEach((slide, idx) => {
+    const dot = document.createElement("button");
+    dot.className = "indicator-dot" + (idx === 0 ? " active" : "");
+    dot.setAttribute("data-slide", idx);
+    
+    // Capitalize first letter of id for labels
+    const name = slide.id.charAt(0).toUpperCase() + slide.id.slice(1);
+    dot.setAttribute("aria-label", `Go to ${name} slide`);
+
+    const tooltip = document.createElement("span");
+    tooltip.className = "tooltip";
+    tooltip.textContent = name;
+    dot.appendChild(tooltip);
+
+    dot.addEventListener("click", () => {
+      goToSlide(idx);
+    });
+    indicatorsContainer.appendChild(dot);
+  });
+
+  // Append scroll down helper arrows to all slides except the last
+  slides.forEach((slide, idx) => {
+    if (idx < slides.length - 1) {
+      const prompt = document.createElement("div");
+      prompt.className = "scroll-prompt";
+      prompt.setAttribute("aria-hidden", "true");
+      prompt.innerHTML = `
+        <span>Scroll Down</span>
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      `;
+      prompt.addEventListener("click", () => {
+        goToSlide(idx + 1);
+      });
+      slide.appendChild(prompt);
+    }
+  });
+
+  function updateHash(hash) {
+    if (history.pushState) {
+      history.pushState(null, null, hash);
+    } else {
+      window.location.hash = hash;
+    }
+  }
+
+  function goToSlide(index, animate = true) {
+    if (index < 0 || index >= slides.length) return;
+    if (isTransitioning && animate) return;
+
+    if (!animate) {
+      const container = document.getElementById("slidesContainer");
+      container.classList.add("no-transition");
+      container.offsetHeight; // force reflow
+    } else {
+      isTransitioning = true;
+    }
+
+    slides.forEach((slide, idx) => {
+      slide.classList.remove("active", "past", "future");
+      if (idx < index) {
+        slide.classList.add("past");
+      } else if (idx > index) {
+        slide.classList.add("future");
+      } else {
+        slide.classList.add("active");
+        slide.scrollTop = 0; // Reset scroll inside the slide when entering
+      }
+    });
+
+    currentSlideIndex = index;
+
+    // Sync indicator dots active state
+    document.querySelectorAll(".indicator-dot").forEach((dot, idx) => {
+      dot.classList.toggle("active", idx === index);
+    });
+
+    updateHash(`#${slides[index].id}`);
+
+    if (!animate) {
+      const container = document.getElementById("slidesContainer");
+      container.offsetHeight; // force reflow
+      container.classList.remove("no-transition");
+      isTransitioning = false;
+    } else {
+      setTimeout(() => {
+        isTransitioning = false;
+      }, transitionDuration);
+    }
+  }
+
+  function navigateSlide(direction) {
+    const targetIdx = currentSlideIndex + direction;
+    if (targetIdx >= 0 && targetIdx < slides.length) {
+      goToSlide(targetIdx);
+    }
+  }
+
+  // Handle Wheel Scroll Event
+  function handleWheel(event) {
+    if (isTransitioning) {
+      event.preventDefault();
+      return;
+    }
+
+    const activeSlide = slides[currentSlideIndex];
+    const deltaY = event.deltaY;
+    const hasOverflow = activeSlide.scrollHeight > activeSlide.clientHeight;
+
+    if (hasOverflow) {
+      if (deltaY > 0) {
+        // Scrolling down: switch slide only when at bottom
+        const isAtBottom = activeSlide.scrollTop + activeSlide.clientHeight >= activeSlide.scrollHeight - 2;
+        if (!isAtBottom) return; 
+      } else if (deltaY < 0) {
+        // Scrolling up: switch slide only when at top
+        const isAtTop = activeSlide.scrollTop <= 2;
+        if (!isAtTop) return;
+      }
+    }
+
+    event.preventDefault();
+    if (deltaY > 0) {
+      navigateSlide(1);
+    } else if (deltaY < 0) {
+      navigateSlide(-1);
+    }
+  }
+
+  window.addEventListener("wheel", handleWheel, { passive: false });
+
+  // Handle Touch Swipes (Mobile gestures)
+  let touchStartY = 0;
+  let touchStartX = 0;
+
+  window.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    if (isTransitioning) return;
+
+    const activeSlide = slides[currentSlideIndex];
+    const touchY = e.touches[0].clientY;
+    const deltaY = touchStartY - touchY;
+    const hasOverflow = activeSlide.scrollHeight > activeSlide.clientHeight;
+
+    if (hasOverflow) {
+      if (deltaY > 0) {
+        // Swiping up (trying to scroll down): transition slide only when at bottom
+        const isAtBottom = activeSlide.scrollTop + activeSlide.clientHeight >= activeSlide.scrollHeight - 2;
+        if (!isAtBottom) return;
+      } else if (deltaY < 0) {
+        // Swiping down (trying to scroll up): transition slide only when at top
+        const isAtTop = activeSlide.scrollTop <= 2;
+        if (!isAtTop) return;
+      }
+    }
+
+    // Swiped vertical threshold exceeded and swipe is mostly vertical
+    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(touchStartX - e.touches[0].clientX)) {
+      const targetIdx = currentSlideIndex + (deltaY > 0 ? 1 : -1);
+      if (targetIdx >= 0 && targetIdx < slides.length) {
+        if (e.cancelable) e.preventDefault();
+        goToSlide(targetIdx);
+      }
+    }
+  }, { passive: false });
+
+  // Handle Keyboard Arrows, Spacebar & Page Up/Down keys
+  window.addEventListener("keydown", (e) => {
+    if (isTransitioning) return;
+
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT")) {
+      return; // Do not intercept typing in fields
+    }
+
+    if (e.key === "ArrowDown" || e.key === "PageDown" || (e.key === " " && !e.shiftKey)) {
+      e.preventDefault();
+      navigateSlide(1);
+    } else if (e.key === "ArrowUp" || e.key === "PageUp" || (e.key === " " && e.shiftKey)) {
+      e.preventDefault();
+      navigateSlide(-1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      goToSlide(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      goToSlide(slides.length - 1);
+    }
+  });
+
+  // Nav menu click overrides
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener("click", (e) => {
+      const hash = link.getAttribute("href");
+      if (hash in hashToIndex) {
+        e.preventDefault();
+        goToSlide(hashToIndex[hash]);
+      }
+    });
+  });
+
+  // Sync index on manual back/forward browser navigation
+  window.addEventListener("hashchange", () => {
+    const hash = window.location.hash;
+    if (hash in hashToIndex && hashToIndex[hash] !== currentSlideIndex) {
+      goToSlide(hashToIndex[hash], true);
+    }
+  });
+
+  // Initial load navigation
+  window.addEventListener("load", () => {
+    const hash = window.location.hash;
+    if (hash in hashToIndex) {
+      goToSlide(hashToIndex[hash], false);
+    } else {
+      goToSlide(0, false);
+    }
+  });
+
+  // Form Reservation handling code
+  const form = document.getElementById("reservationForm");
+  const status = document.getElementById("status");
+
+  function showSuccess() {
+    status.className = "status success";
+    status.textContent = "Your reservation request has been sent successfully.";
+    form.reset();
+  }
+
+  function showError() {
+    status.className = "status error";
+    status.textContent = "Something went wrong. Please try again.";
+  }
+
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (!name || !email || !phone) {
+      showError();
+      return;
+    }
+
+    status.className = "status";
+    status.textContent = "Sending reservation...";
+
+    const url = SCRIPT_URL + "?" + new URLSearchParams({
+      name,
+      email,
+      phone
+    });
+
+    fetch(url, {
+      method: "GET",
+      mode: "no-cors"
+    })
+    .then(() => showSuccess())
+    .catch(() => showError());
+  });
+</script>
+
+</body>
+</html>
